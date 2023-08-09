@@ -56,6 +56,7 @@ var (
 // URL specified in Nixery's configuration.
 func downloadPopularity(url string) (layers.Popularity, error) {
 	resp, err := http.Get(url)
+	log.Info("url", url)
 	if err != nil {
 		return nil, err
 	}

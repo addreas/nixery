@@ -250,8 +250,10 @@ func main() {
 
 	go finaliser(count, downloaders, narinfos)
 
+	c := 1
 	counts := make(map[string]int)
 	for ni := range narinfos {
+		c += 1
 		refs := narInfoToRefs(ni)
 		for _, ref := range refs {
 			if ref == "" {
@@ -260,7 +262,12 @@ func main() {
 
 			counts[ref] += 1
 		}
+
+		prcnt := float64(c) / float64(len(paths)) * 100
+
+		fmt.Printf("\r\t\t\tProgress: %d/%d (%.0f%%)", c, len(paths), prcnt)
 	}
+	fmt.Println()
 
 	// Remove all self-references (i.e. packages not referenced by anyone else)
 	for k, v := range counts {

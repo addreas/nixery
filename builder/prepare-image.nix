@@ -10,17 +10,10 @@
 # structure required for using the image together with the individual
 # package layers.
 
-{
-  # Description of the package set to be used (will be loaded by load-pkgs.nix)
-  srcType ? "nixpkgs"
-, srcArgs ? "nixos-unstable"
-, system ? "x86_64-linux"
-, importArgs ? { }
-, # Path to load-pkgs.nix
-  loadPkgs ? ./load-pkgs.nix
-, # Packages to install by name (which must refer to top-level attributes of
-  # nixpkgs). This is passed in as a JSON-array in string form.
-  packages ? "[]"
+{ system ? "x86_64-linux"
+, hostSystem ? "x86_64-linux"
+, packages ? "[]"
+, nixpkgs
 }:
 
 let
@@ -35,18 +28,12 @@ let
     toJSON;
 
   # Package set to use for sourcing utilities
-  nativePkgs = import loadPkgs { inherit srcType srcArgs importArgs; };
-  inherit (nativePkgs) coreutils jq openssl lib runCommand writeText symlinkJoin;
+  inherit (nixpkgs.legacyPackages.${hostSystem}) coreutils jq openssl lib runCommand writeText symlinkJoin;
 
   # Package set to use for packages to be included in the image. This
   # package set is imported with the system set to the target
   # architecture.
-  pkgs = import loadPkgs {
-    inherit srcType srcArgs;
-    importArgs = importArgs // {
-      inherit system;
-    };
-  };
+  pkgs = nixpkgs.legacyPackages."${system}";
 
   # deepFetch traverses the top-level Nix package set to retrieve an item via a
   # path specified in string form.

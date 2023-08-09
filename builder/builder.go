@@ -8,7 +8,6 @@
 package builder
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -16,11 +15,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
+
+	_ "embed"
 
 	"github.com/google/nixery/config"
 	"github.com/google/nixery/layers"
@@ -29,6 +30,9 @@ import (
 	"github.com/im7mortal/kmutex"
 	log "github.com/sirupsen/logrus"
 )
+
+//go:embed prepare-image.nix
+var prepareImageScript string
 
 // The maximum number of layers in an image is 125. To allow for
 // extensibility, the actual number of layers Nixery is "allowed" to
@@ -60,6 +64,8 @@ type Architecture struct {
 
 var amd64 = Architecture{"x86_64-linux", "amd64"}
 var arm64 = Architecture{"aarch64-linux", "arm64"}
+
+var hostSystem = amd64.nixSystem
 
 // Image represents the information necessary for building a container image.
 // This can be either a list of package names (corresponding to keys in the
@@ -169,20 +175,37 @@ func metaPackages(packages []string) (*Architecture, []string) {
 	return arch, packages
 }
 
-// logNix logs each output line from Nix. It runs in a goroutine per
-// output channel that should be live-logged.
-func logNix(image, cmd string, r io.ReadCloser) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		log.WithFields(log.Fields{
-			"image": image,
-			"cmd":   cmd,
-		}).Info("[nix] " + scanner.Text())
+func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
+	packages, err := json.Marshal(image.Packages)
+	if err != nil {
+		return nil, err
 	}
-}
 
-func callNix(program, image string, args []string) ([]byte, error) {
-	cmd := exec.Command(program, args...)
+	if image.Tag == "latest" {
+		image.Tag = ""
+	}
+
+	flakeRef := strings.TrimSuffix(fmt.Sprintf("%s/%s", cfg.Flake, image.Tag), "/")
+
+	logFields := log.Fields{
+		"image":      image,
+		"flakeRef":   flakeRef,
+		"packages":   string(packages),
+		"system":     image.Arch.nixSystem,
+		"hostSystem": hostSystem,
+	}
+
+	cmd := exec.Command("nix",
+		"build",
+		"--expr", prepareImageScript,
+		"--impure",
+		"--no-link",
+		"--print-out-paths",
+		"--timeout", cfg.Timeout,
+		"--arg", "nixpkgs", fmt.Sprintf("builtins.getFlake %s", strconv.Quote(flakeRef)),
+		"--argstr", "packages", string(packages),
+		"--argstr", "system", image.Arch.nixSystem,
+		"--argstr", "hostSystem", hostSystem)
 
 	outpipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -193,41 +216,43 @@ func callNix(program, image string, args []string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	go logNix(image, program, errpipe)
 
 	if err = cmd.Start(); err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"image": image,
-			"cmd":   program,
-		}).Error("error invoking Nix")
+		log.WithError(err).
+			WithFields(logFields).
+			Error("error invoking Nix")
 
 		return nil, err
 	}
 
-	log.WithFields(log.Fields{
-		"cmd":   program,
-		"image": image,
-	}).Info("invoked Nix build")
+	log.WithFields(logFields).
+		Info("invoked Nix build")
 
-	stdout, _ := ioutil.ReadAll(outpipe)
+	stdout, _ := io.ReadAll(outpipe)
+	stderr, _ := io.ReadAll(errpipe)
 
 	if err = cmd.Wait(); err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"image":  image,
-			"cmd":    program,
-			"stdout": stdout,
-		}).Info("failed to invoke Nix")
+		log.WithError(err).
+			WithFields(logFields).
+			WithFields(log.Fields{
+				"stdout": string(stdout),
+				"stderr": string(stderr),
+			}).
+			Info("failed to invoke Nix")
 
 		return nil, err
 	}
 
 	resultFile := strings.TrimSpace(string(stdout))
-	buildOutput, err := ioutil.ReadFile(resultFile)
+	buildOutput, err := os.ReadFile(resultFile)
 	if err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"image": image,
-			"file":  resultFile,
-		}).Info("failed to read Nix result file")
+		log.WithError(err).
+			WithFields(logFields).
+			WithFields(log.Fields{
+				"image": image,
+				"file":  resultFile,
+			}).
+			Info("failed to read Nix result file")
 
 		return nil, err
 	}
@@ -242,22 +267,7 @@ func callNix(program, image string, args []string) ([]byte, error) {
 // This function is only invoked if the manifest is not found in any
 // cache.
 func prepareImage(s *State, image *Image) (*ImageResult, error) {
-	packages, err := json.Marshal(image.Packages)
-	if err != nil {
-		return nil, err
-	}
-
-	srcType, srcArgs := s.Cfg.Pkgs.Render(image.Tag)
-
-	args := []string{
-		"--timeout", s.Cfg.Timeout,
-		"--argstr", "packages", string(packages),
-		"--argstr", "srcType", srcType,
-		"--argstr", "srcArgs", srcArgs,
-		"--argstr", "system", image.Arch.nixSystem,
-	}
-
-	output, err := callNix("nixery-prepare-image", image.Name, args)
+	output, err := callPrepareImage(image, s.Cfg)
 	if err != nil {
 		// granular error logging is performed in callNix already
 		return nil, err
@@ -465,7 +475,7 @@ func uploadHashLayer(ctx context.Context, s *State, key string, mrating uint64, 
 }
 
 func BuildImage(ctx context.Context, s *State, image *Image) (*BuildResult, error) {
-	key := s.Cfg.Pkgs.CacheKey(image.Packages, image.Tag)
+	key := cacheKey(image.Packages, image.Tag)
 	if key != "" {
 		if m, c := manifestFromCache(ctx, s, key); c {
 			return &BuildResult{

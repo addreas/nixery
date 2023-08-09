@@ -5,10 +5,14 @@ package builder
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/google/nixery/manifest"
@@ -25,6 +29,29 @@ type LocalCache struct {
 	// Layer cache
 	lmtx   sync.RWMutex
 	lcache map[string]manifest.Entry
+}
+
+// Regex to determine whether a git reference is a commit hash or
+// something else (branch/tag).
+//
+// Used to check whether a git reference is cacheable, and to pass the
+// correct git structure to Nix.
+//
+// Note: If a user creates a branch or tag with the name of a commit
+// and references it intentionally, this heuristic will fail.
+var commitRegex = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+func cacheKey(pkgs []string, tag string) string {
+	// Only full commit hashes can be used for caching, as
+	// everything else is potentially a moving target.
+	if !commitRegex.MatchString(tag) {
+		return ""
+	}
+
+	unhashed := strings.Join(pkgs, "") + tag
+	hashed := fmt.Sprintf("%x", sha1.Sum([]byte(unhashed)))
+
+	return hashed
 }
 
 // Creates an in-memory cache and ensures that the local file path for
