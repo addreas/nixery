@@ -166,7 +166,7 @@ func metaPackages(packages []string) (*Architecture, []string) {
 	for _, p := range metapkgs {
 		switch p {
 		case "shell":
-			packages = append(packages, "bashInteractive", "coreutils", "moreutils", "nano")
+			packages = append(packages, "bashInteractive", "coreutils", "moreutils", "nano", "dockerTools.fakeNss")
 		case "arm64":
 			arch = &arm64
 		}
