@@ -31,6 +31,7 @@ type Backend int
 
 const (
 	GCS = iota
+	S3
 	FileSystem
 )
 
@@ -49,12 +50,12 @@ func FromEnv() (Config, error) {
 	switch os.Getenv("NIXERY_STORAGE_BACKEND") {
 	case "gcs":
 		b = GCS
+	case "s3":
+		b = S3
 	case "filesystem":
 		b = FileSystem
 	default:
-		log.WithField("values", []string{
-			"gcs",
-		}).Fatal("NIXERY_STORAGE_BACKEND must be set to a supported value (gcs or filesystem)")
+		log.Fatal("NIXERY_STORAGE_BACKEND must be set to a supported value (gcs, s3, or filesystem)")
 	}
 
 	return Config{
