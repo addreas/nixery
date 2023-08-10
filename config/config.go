@@ -37,12 +37,13 @@ const (
 
 // Config holds the Nixery configuration options.
 type Config struct {
-	Port    string  // Port on which to launch HTTP server
-	Flake   string  // Source for Nix package set
-	Timeout string  // Timeout for a single Nix builder (seconds)
-	WebDir  string  // Directory with static web assets
-	PopUrl  string  // URL to the Nix package popularity count
-	Backend Backend // Storage backend to use for Nixery
+	Port              string  // Port on which to launch HTTP server
+	Flake             string  // Source for Nix package set
+	Timeout           string  // Timeout for a single Nix builder (seconds)
+	WebDir            string  // Directory with static web assets
+	PopUrl            string  // URL to the Nix package popularity count
+	Backend           Backend // Storage backend to use for Nixery
+	NixCacheUploadURL string  // https://nixos.org/manual/nix/stable/package-management/s3-substituter.html
 }
 
 func FromEnv() (Config, error) {
@@ -59,11 +60,12 @@ func FromEnv() (Config, error) {
 	}
 
 	return Config{
-		Port:    getConfig("PORT", "HTTP port", ""),
-		Flake:   getConfig("NIXERY_FLAKE", "Source flake to use", "nixpkgs"),
-		Timeout: getConfig("NIX_TIMEOUT", "Nix builder timeout", "60"),
-		WebDir:  getConfig("WEB_DIR", "Static web file dir", "./web"),
-		PopUrl:  os.Getenv("NIX_POPULARITY_URL"),
-		Backend: b,
+		Port:              getConfig("PORT", "HTTP port", ""),
+		Flake:             getConfig("NIXERY_FLAKE", "Source flake to use", "nixpkgs"),
+		Timeout:           getConfig("NIX_TIMEOUT", "Nix builder timeout", "60"),
+		WebDir:            getConfig("WEB_DIR", "Static web file dir", "./web"),
+		PopUrl:            os.Getenv("NIX_POPULARITY_URL"),
+		Backend:           b,
+		NixCacheUploadURL: os.Getenv("NIX_CACHE_UPLOAD_URL"),
 	}, nil
 }

@@ -195,7 +195,7 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 		"hostSystem": hostSystem,
 	}
 
-	cmd := exec.Command("nix",
+	args := []string{
 		"build",
 		"--expr", prepareImageScript,
 		"--impure",
@@ -205,7 +205,17 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 		"--arg", "nixpkgs", fmt.Sprintf("builtins.getFlake %s", strconv.Quote(flakeRef)),
 		"--argstr", "packages", string(packages),
 		"--argstr", "system", image.Arch.nixSystem,
-		"--argstr", "hostSystem", hostSystem)
+		"--argstr", "hostSystem", hostSystem,
+	}
+
+	if cfg.NixCacheUploadURL != "" {
+		args = append(args,
+			"--extra-substituters", cfg.NixCacheUploadURL,
+			"--extra-trusted-substituters", cfg.NixCacheUploadURL,
+		)
+	}
+
+	cmd := exec.Command("nix", args...)
 
 	outpipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -244,6 +254,7 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 	}
 
 	resultFile := strings.TrimSpace(string(stdout))
+
 	buildOutput, err := os.ReadFile(resultFile)
 	if err != nil {
 		log.WithError(err).
@@ -257,6 +268,14 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 		return nil, err
 	}
 
+	if cfg.NixCacheUploadURL != "" {
+		go func() {
+			out, err := exec.Command("nix", "copy", "--to", cfg.NixCacheUploadURL, resultFile).CombinedOutput()
+			if err != nil {
+				log.WithError(err).WithFields(logFields).WithField("out", string(out)).Error("nix copy to cache failed")
+			}
+		}()
+	}
 	return buildOutput, nil
 }
 
