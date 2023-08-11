@@ -85,6 +85,7 @@
 
             maxLayers = 20;
             contents = with pkgs; [
+              dockerTools.fakeNss
               bashInteractive
               cacert
               coreutils
