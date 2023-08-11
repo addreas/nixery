@@ -18,7 +18,7 @@
           default = self.packages.${system}.nixery;
           nixery = pkgs.buildGoModule rec {
             name = "nixery";
-            src = ./.;
+            src = pkgs.lib.sources.sourceFilesBySuffices ./. [".go" "prepare-image.nix" "go.mod" "go.sum"];
             doCheck = true;
 
             subPackages = [ "cmd/server" ];
