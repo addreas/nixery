@@ -1,0 +1,15 @@
+name: "Build nixery image"
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: DeterminateSystems/nix-installer-action@main
+    - uses: DeterminateSystems/magic-nix-cache-action@main
+    - run: nix build .#images.x86_64-linux.nixery
+    - run: nix run nixpkgs#skopeo -- copy docker-archive:./result docker://ghcr.io/${{ github.repository }}:latest --dest-creds=${{ github.repository_owner }}:${{ github.token }}
+
+
+

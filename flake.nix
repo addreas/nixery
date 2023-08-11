@@ -21,16 +21,18 @@
             src = ./.;
             doCheck = true;
 
-            subPackages = ["cmd/server"];
+            subPackages = [ "cmd/server" ];
 
             # Needs to be updated after every modification of go.mod/go.sum
-            vendorHash = "sha256-0FgYIIqMy8O6F4uSumwdS0VIyRaY8QFIy1QgXudBU7A=";
+            vendorHash = "sha256-RK6uG7UzJo4UJ5uibtq0bXvjalJUWMYUU91FfxOxDF0=";
 
             ldflags = [
               "-s"
               "-w"
-              "-X" "main.version=${self.sourceInfo.narHash}"
-              "-X" "builder.hostSystem=${system}"
+              "-X"
+              "main.version=${self.sourceInfo.narHash}"
+              "-X"
+              "builder.hostSystem=${system}"
             ];
 
             nativeBuildInputs = [ pkgs.makeWrapper ];
