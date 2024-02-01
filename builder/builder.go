@@ -105,7 +105,7 @@ type BuildResult struct {
 func ImageFromName(name string, tag string) Image {
 	pkgs := strings.Split(name, "/")
 	arch, expanded := metaPackages(pkgs)
-	expanded = append(expanded, "cacert", "iana-etc")
+	expanded = append(expanded, "cacert", "iana-etc", "dockerTools.fakeNss")
 
 	sort.Strings(pkgs)
 	sort.Strings(expanded)
@@ -166,7 +166,7 @@ func metaPackages(packages []string) (*Architecture, []string) {
 	for _, p := range metapkgs {
 		switch p {
 		case "shell":
-			packages = append(packages, "bashInteractive", "coreutils", "moreutils", "nano", "dockerTools.fakeNss")
+			packages = append(packages, "bashInteractive", "coreutils", "moreutils", "findutils", "procps", "less", "gnused", "jq", "dig", "curl", "nano", "vim")
 		case "arm64":
 			arch = &arm64
 		}
