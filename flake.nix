@@ -32,7 +32,7 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
             wrapProgram $out/bin/server \
-              --set WEB_DIR "${./web}" \
+              --set-default WEB_DIR "${./web}" \
           '';
         };
       in
