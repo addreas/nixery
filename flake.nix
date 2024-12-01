@@ -15,7 +15,7 @@
           src = pkgs.lib.sources.sourceFilesBySuffices ./. [ ".go" "prepare-image.nix" "go.mod" "go.sum" ];
           doCheck = false;
 
-          subPackages = [ "cmd/server" ];
+          subPackages = [ "cmd/nixery" ];
 
           # Needs to be updated after every modification of go.mod/go.sum
           vendorHash = "sha256-RK6uG7UzJo4UJ5uibtq0bXvjalJUWMYUU91FfxOxDF0=";
@@ -31,8 +31,9 @@
 
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
-            wrapProgram $out/bin/server \
+            wrapProgram $out/bin/nixery \
               --set-default WEB_DIR "${./web}" \
+              --set-default PREPARE_IMAGE_SCRIPT "${./builder/prepare-image.nix}"
           '';
         };
       in
@@ -50,18 +51,24 @@
         images.${system}.nixery =
           pkgs.dockerTools.buildLayeredImage {
             name = "nixery";
-            config.Cmd = [ "server" ];
-            config.User = "1000:1000";
-            config.Env = [
-              "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-              # "NIX_STORE_DIR=/nixery/nix/store"
-              # "NIX_LOG_DIR=/nixery/nix/var/log"
-              # "NIX_STATE_DIR=/nixery/nix/var"
-            ];
+            config = {
+              Cmd = [ "nixery" ];
+              User = "1000:1000";
+              Env = [
+                "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
+                "NIX_LOG_DIR=/nixery/nix/var/log"
+                "NIX_STATE_DIR=/nixery/nix/var/nix"
+              ];
+              WorkingDir = "/nixery";
+              Volumes = {
+                "/nixery" = { };
+                "/tmp" = { };
+              };
+            };
 
             extraCommands = ''
-              mkdir -p ./tmp ./nix/{store,var/nix}
-              chmod -R a+w ./tmp ./nix/{store,var/nix}
+              mkdir -p ./nix/store
+              chmod -R a+w ./nix/store
 
               mkdir -p ./etc/nix
               echo 'sandbox = false' >> ./etc/nix/nix.conf

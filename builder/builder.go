@@ -31,9 +31,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//go:embed prepare-image.nix
-var prepareImageScript string
-
 // The maximum number of layers in an image is 125. To allow for
 // extensibility, the actual number of layers Nixery is "allowed" to
 // use up is set at a lower point.
@@ -197,7 +194,7 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 
 	args := []string{
 		"build",
-		"--expr", prepareImageScript,
+		"--file", os.Getenv("PREPARE_IMAGE_SCRIPT"),
 		"--impure",
 		"--no-link",
 		"--print-out-paths",
