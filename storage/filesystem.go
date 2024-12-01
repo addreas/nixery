@@ -21,9 +21,9 @@ type FSBackend struct {
 }
 
 func NewFSBackend() (*FSBackend, error) {
-	p := os.Getenv("STORAGE_PATH")
+	p := os.Getenv("NIXERY_STORAGE_PATH")
 	if p == "" {
-		return nil, fmt.Errorf("STORAGE_PATH must be set for filesystem storage")
+		return nil, fmt.Errorf("NIXERY_STORAGE_PATH must be set for filesystem storage")
 	}
 
 	p = path.Clean(p)

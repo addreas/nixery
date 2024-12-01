@@ -1,6 +1,7 @@
 {
   description = "A very basic flake";
 
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
   inputs.systems.url = "github:nix-systems/default-linux";
 
   outputs = { self, systems, nixpkgs }:
@@ -32,8 +33,8 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
             wrapProgram $out/bin/nixery \
-              --set-default WEB_DIR "${./web}" \
-              --set-default PREPARE_IMAGE_SCRIPT "${./builder/prepare-image.nix}"
+              --set-default NIXERY_WEB_DIR "${./web}" \
+              --set-default NIXERY_PREPARE_IMAGE_SCRIPT "${./builder/prepare-image.nix}"
           '';
         };
       in
@@ -56,8 +57,6 @@
               User = "1000:1000";
               Env = [
                 "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-                "NIX_LOG_DIR=/nixery/nix/var/log"
-                "NIX_STATE_DIR=/nixery/nix/var/nix"
               ];
               WorkingDir = "/nixery";
               Volumes = {
@@ -66,11 +65,16 @@
               };
             };
 
-            extraCommands = ''
-              mkdir -p ./nix/store
-              chmod -R a+w ./nix/store
+            uid = 1000;
+            gid = 1000;
+            uname = "nixery";
+            gname = "nixery";
 
-              mkdir -p ./etc/nix
+            extraCommands = ''
+              mkdir -p ./nix/{store,var/nix,var/log}
+              chmod -R a+w ./nix/{store,var/nix,var/log}
+
+              mkdir -p ./etc/nix 
               echo 'sandbox = false' >> ./etc/nix/nix.conf
               echo 'experimental-features = nix-command flakes' >> ./etc/nix/nix.conf
             '';
