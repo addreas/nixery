@@ -56,9 +56,9 @@
             config.User = "1000:1000";
             config.Env = [
               "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-              # "NIX_STORE_DIR=/nixery/nix/store"
-              # "NIX_LOG_DIR=/nixery/nix/var/log"
-              # "NIX_STATE_DIR=/nixery/nix/var"
+              "NIX_STORE_DIR=/nixery/nix/store"
+              "NIX_LOG_DIR=/nixery/nix/var/log"
+              "NIX_STATE_DIR=/nixery/nix/var"
             ];
 
             extraCommands = ''
