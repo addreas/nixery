@@ -1,7 +1,7 @@
 {
   description = "A very basic flake";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
+  inputs.nixpkgs.url = "nixpkgs/24.05";
   inputs.systems.url = "github:nix-systems/default-linux";
 
   outputs = { self, systems, nixpkgs }:
@@ -77,6 +77,8 @@
               mkdir -p ./etc/nix 
               echo 'sandbox = false' >> ./etc/nix/nix.conf
               echo 'experimental-features = nix-command flakes' >> ./etc/nix/nix.conf
+              echo 'substituters = https://nix-community.cachix.org https://cache.nixos.org' >> ./etc/nix/nix.conf
+              echo 'trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=' >> ./etc/nix/nix.conf
             '';
 
             maxLayers = 20;
