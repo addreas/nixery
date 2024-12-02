@@ -43,6 +43,7 @@ type State struct {
 	Cache       *LocalCache
 	Cfg         config.Config
 	Pop         layers.Popularity
+	BuildMutex  *kmutex.Kmutex
 	UploadMutex *kmutex.Kmutex
 }
 
@@ -283,6 +284,10 @@ func callPrepareImage(image *Image, cfg config.Config) ([]byte, error) {
 // This function is only invoked if the manifest is not found in any
 // cache.
 func prepareImage(s *State, image *Image) (*ImageResult, error) {
+	buildMutexKey := fmt.Sprint(image)
+	s.BuildMutex.Lock(buildMutexKey)
+	defer s.BuildMutex.Unlock(buildMutexKey)
+
 	output, err := callPrepareImage(image, s.Cfg)
 	if err != nil {
 		// granular error logging is performed in callNix already

@@ -265,6 +265,7 @@ func main() {
 		Cfg:         cfg,
 		Pop:         pop,
 		Storage:     s,
+		BuildMutex:  kmutex.New(),
 		UploadMutex: kmutex.New(),
 	}
 
