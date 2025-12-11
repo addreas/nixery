@@ -235,6 +235,13 @@ func prepareImage(s *State, image *Image) (*ImageResult, error) {
 		"--argstr", "system", image.Arch.nixSystem,
 	}
 
+	if s.Cfg.CacheURL != "" {
+		args = append(args,
+			"--extra-substituters", s.Cfg.CacheURL,
+			"--extra-trusted-substituters", s.Cfg.CacheURL,
+		)
+	}
+
 	output, err := callNix("nixery-prepare-image", image.Name, args, s.Errors)
 	if err != nil {
 		// granular error logging is performed in callNix already
@@ -249,6 +256,14 @@ func prepareImage(s *State, image *Image) (*ImageResult, error) {
 		return nil, err
 	}
 
+	if s.Cfg.CacheURL != "" {
+		go func() {
+			out, err := exec.Command("nix", "copy", "--to", s.Cfg.CacheURL, result.SymlinkLayer.Path).CombinedOutput()
+			if err != nil {
+				slog.Error("nix copy to cache failed", "error", err, "out", string(out))
+			}
+		}()
+	}
 	return &result, nil
 }
 

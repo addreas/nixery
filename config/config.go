@@ -40,6 +40,8 @@ type Config struct {
 
 	PopUrl  string  // URL to the Nix package popularity count
 	Backend Backend // Storage backend to use for Nixery
+
+	CacheURL string
 }
 
 func FromEnv() (Config, error) {
@@ -62,10 +64,11 @@ func FromEnv() (Config, error) {
 	}
 
 	return Config{
-		Port:    getConfig("PORT", "HTTP port", ""),
-		Pkgs:    pkgs,
-		Timeout: getConfig("NIX_TIMEOUT", "Nix builder timeout", "60"),
-		PopUrl:  os.Getenv("NIX_POPULARITY_URL"),
-		Backend: b,
+		Port:     getConfig("PORT", "HTTP port", ""),
+		Pkgs:     pkgs,
+		Timeout:  getConfig("NIX_TIMEOUT", "Nix builder timeout", "60"),
+		PopUrl:   os.Getenv("NIX_POPULARITY_URL"),
+		Backend:  b,
+		CacheURL: os.Getenv("NIX_CACHE_URL"),
 	}, nil
 }
