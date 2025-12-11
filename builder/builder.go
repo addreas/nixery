@@ -20,12 +20,13 @@ import (
 	"sort"
 	"strings"
 
+	"log/slog"
+
 	"github.com/google/nixery/config"
 	"github.com/google/nixery/layers"
 	"github.com/google/nixery/manifest"
 	"github.com/google/nixery/storage"
 	"github.com/im7mortal/kmutex"
-	"log/slog"
 )
 
 // The maximum number of layers in an image is 125. To allow for

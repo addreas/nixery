@@ -40,11 +40,13 @@ depot.nix.readTree.drvTargets rec {
   # variables are set at runtime.
   nixery = buildGoModule rec {
     name = "nixery";
-    src = ./.;
+    pname = "server";
+
+    src = pkgs.lib.sources.sourceFilesBySuffices ./. [ ".go" ".nix" "go.mod" "go.sum" ".html" ".png" ];
     doCheck = true;
 
     # Needs to be updated after every modification of go.mod/go.sum
-    vendorHash = "sha256:1qv193v8c8bav1xjprv7ra45ygzcjv2yqv2wnz9hr8qn4gz1f4da";
+    vendorHash = "sha256-6xpt/XsOJxNktTREv7RYttCzWgb2A8rqvhd8f5vxi/A=";
 
     ldflags = [
       "-s"
@@ -88,6 +90,7 @@ depot.nix.readTree.drvTargets rec {
     # Disable sandboxing to avoid running into privilege issues
     mkdir -p /etc/nix
     echo 'sandbox = false' >> /etc/nix/nix.conf
+    echo 'experimental-features = nix-command flakes' >> ./etc/nix/nix.conf
 
     # In some cases users building their own image might want to
     # customise something on the inside (e.g. set up an environment

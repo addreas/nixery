@@ -114,6 +114,30 @@ func (p *PkgsPath) CacheKey(pkgs []string, tag string) string {
 	return ""
 }
 
+type Flake struct {
+	ref string
+}
+
+func (p *Flake) Render(tag string) (string, string) {
+	if tag == "latest" {
+		return "flake", p.ref
+	}
+	return "flake", fmt.Sprintf("%s/%s", p.ref, tag)
+}
+
+func (p *Flake) CacheKey(pkgs []string, tag string) string {
+	// Only full commit hashes can be used for caching, as
+	// everything else is potentially a moving target.
+	if !commitRegex.MatchString(tag) {
+		return ""
+	}
+
+	unhashed := strings.Join(pkgs, "") + tag
+	hashed := fmt.Sprintf("%x", sha1.Sum([]byte(unhashed)))
+
+	return hashed
+}
+
 // Retrieve a package source from the environment. If no source is
 // specified, the Nix code will default to a recent NixOS channel.
 func pkgSourceFromEnv() (PkgSource, error) {
@@ -138,6 +162,14 @@ func pkgSourceFromEnv() (PkgSource, error) {
 
 		return &PkgsPath{
 			path: path,
+		}, nil
+	}
+
+	if ref := os.Getenv("NIXERY_FLAKE_REF"); ref != "" {
+		slog.Info("using Nix flake", "ref", ref)
+
+		return &Flake{
+			ref: ref,
 		}, nil
 	}
 

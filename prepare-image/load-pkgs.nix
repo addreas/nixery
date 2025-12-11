@@ -25,6 +25,8 @@ let
   # No special handling is used for paths, so users are expected to pass one
   # that will work natively with Nix.
   importPath = path: import (toPath path) importArgs;
+
+  fetchImportFlake = ref: import (getFlake ref) importArgs;
 in
 if srcType == "nixpkgs" then
   fetchImportChannel srcArgs
@@ -32,5 +34,7 @@ else if srcType == "git" then
   fetchImportGit (fromJSON srcArgs)
 else if srcType == "path" then
   importPath srcArgs
+else if srcType == "flake" then
+  fetchImportFlake srcArgs
 else
   throw ("Invalid package set source specification: ${srcType} (${srcArgs})")
