@@ -254,6 +254,8 @@ func main() {
 	switch cfg.Backend {
 	case config.GCS:
 		s, err = storage.NewGCSBackend()
+	case config.S3:
+		s, err = storage.NewS3Backend()
 	case config.FileSystem:
 		s, err = storage.NewFSBackend()
 	}
